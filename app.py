@@ -4,7 +4,7 @@ import re
 import os
 from dotenv import load_dotenv
 load_dotenv()
-genai.configure(api_key="AIzaSyDYUmwXVoy1OXV7cnt5oDovGw3E7b6kYjc")
+genai.configure(api_key="AIzaSyAlSxCxVXHOnGCT4nHftjBiCFAo46DM1iM")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 
