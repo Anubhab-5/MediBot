@@ -1,27 +1,26 @@
 import streamlit as st
+import time
 import google.generativeai as genai
 import re
 import os
+from datetime import datetime
 from dotenv import load_dotenv
-load_dotenv()
-genai.configure(api_key="AIzaSyAlSxCxVXHOnGCT4nHftjBiCFAo46DM1iM")
-model = genai.GenerativeModel('gemini-1.5-flash')
 
+load_dotenv()
+genai.configure(api_key="AIzaSyAeDa9dpAF0GL91jxdYXapoNZIJ1Vab6mE")
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 def clean_input(text):
     """Preserve medical punctuation while cleaning input"""
     if not text:
         return ""
-    # Allow hyphens, apostrophes, and question marks
     return re.sub(r'[^\w\s\-\'?]', '', text).strip()
 
-# Cache responses to avoid duplicate API calls
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_cached_advice(_model, qualification, question):
     return get_career_advice(qualification, question)
 
 def get_career_advice(qualification, question):
-    """Original prompt preserved"""
     prompt = f"""
     You are an expert Doctor and professor mentoring and answering a {qualification} medical student's question. Provide high quality answer to this question: "{question}"
 
@@ -40,178 +39,394 @@ def get_career_advice(qualification, question):
     except Exception as e:
         return f"## ⚠️ Service Error\nPlease check your internet connection. Technical details: {str(e)}"
 
-# UI Configuration
+# App Configuration
 st.set_page_config(
     page_title="MediBot",
     page_icon="🩺",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for responsive design
+# Simple Clean CSS
 st.markdown("""
-    <style>
-    /* Main container */
-    .main {padding: 2rem 1rem; max-width: 1200px; margin: 0 auto;}
+<style>
+    /* Simple Reset */
+    .main {
+        background: #ffffff;
+        font-family: 'Montserrat', sans-serif;
+    }
     
-    /* Header styling */
-    .header {text-align: center; padding: 1rem 0 2rem;}
-    .title {color: #1a73e8; font-size: 2.5rem; margin-bottom: 0.5rem;}
-    .subtitle {color: #BAECFF; font-size: 1.2rem;}
+    /* Header */
+    .header {
+        text-align: center;
+        padding: 2rem 1rem 1rem;
+        background: white;
+        border-radius: 8px;
+    }
     
-    /* Form styling */
-    .form-container {background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 2rem;}
-    .input-label {font-weight: 600; margin-bottom: 0.5rem; color: #FFFFFF;}
-    .input-field {border: 1px solid #dadce0 !important; border-radius: 8px !important; padding: 12px !important;}
-    .input-field:focus {border-color: #1a73e8 !important; box-shadow: 0 0 0 2px #e8f0fe;}
-    .submit-btn {background: #1a73e8 !important; color: white !important; border: none !important; border-radius: 8px !important; padding: 12px 24px !important; font-weight: 600 !important; width: 100%; transition: all 0.3s;}
-    .submit-btn:hover {background: #1557b0 !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(26,115,232,0.25);}
-    .submit-btn:active {transform: translateY(0);}
+    .title {
+        font-size: 50px;
+        font-weight: 700;
+        color: #000B80;
+        margin-bottom: 0.2rem;
+    }
     
-    /* Response styling */
-    .response-header {display: flex; align-items: center; margin-bottom: 1rem;}
-    .response-box {background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 4px solid #1a73e8;}
-    .response-content {line-height: 1.6;}
+    .subtitle {
+        font-size: 20px;
+        color: #FF0000;
+        font-weight: 700;
+        margin-bottom: 0.1rem;
+    }
     
-    /* History styling */
-    .history-card {background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border-left: 3px solid #1a73e8; transition: all 0.3s;}
-    .history-card:hover {transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
-    .history-question {font-weight: 600; margin-bottom: 0.5rem; color: #202124;}
-    .history-qualification {color: #5f6368; font-size: 0.9rem;}
+    /* Simple Stats */
+    .stats {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin: 1rem 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #0015FF;
+    }
     
-    /* Responsive adjustments */
+    .stat {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-weight: 700;
+        color: #0015FF;
+    }
+    
+    /* Input Section */
+    .input-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .section-title {
+        font-size: 30px;
+        font-weight: 700;
+        text-align: center;
+        color: #000B80;
+    }
+    
+    /* Form Elements */
+    .input-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #FFFFFF;
+        display: block;
+    }
+    
+    .stTextInput>div>div>input {
+        border-radius: 8px !important;
+        
+        padding: 0.75rem !important;
+        font-size: 16px !important;
+    }
+    
+    .stTextArea>div>textarea {
+        border-radius: 8px !important;
+        
+        padding: 0.75rem !important;
+        font-size: 16px !important;
+        min-height: 100px !important;
+    }
+    
+    .stTextInput>div>div>input:focus, 
+    .stTextArea>div>textarea:focus {
+        border-color: 2px solid #2563eb !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+    }
+    
+    /* Button */
+    .stButton>button {
+        background: #2563eb !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 600 !important;
+        width: 100% !important;
+        margin-top: 1rem !important;
+    }
+    
+    .stButton>button:hover {
+        background: #1d4ed8 !important;
+    }
+    
+    /* Response Section */
+    .response-section {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        border-left: 4px solid #2563eb;
+    }
+    
+    .response-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        color: #000B80;
+    }
+    
+    .response-meta {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+        font-size: 0.9rem;
+        color: #666;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    /* History Section */
+    .history-section {
+        margin: 2rem 0 1rem;
+    }
+    
+    .history-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .history-question {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    
+    .history-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    
+    .history-badge {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #9ca3af;
+        font-style: italic;
+    }
+    
+    /* Footer */
+    .footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding: 1rem;
+        color: #6b7280;
+        font-size: 0.9rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    /* Mobile Optimizations */
     @media (max-width: 768px) {
-        .main {padding: 1rem;}
-        .form-container {padding: 1.5rem;}
-        .title {font-size: 2rem;}
+        .header {
+            padding: 1.5rem 1rem 0.5rem;
+        }
+        
+        .title { 
+        font-size: 40px;
+        font-weight: 800;
+        color: #000B80;
+        margin-bottom: 0.2rem;
+        }
+        
+        .input-section {
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        
+        .stats {
+            gap: 1.5rem;
+            font-size: 0.85rem;
+        }
+        
     }
-    @media (max-width: 480px) {
-        .title {font-size: 1.8rem;}
-        .subtitle {font-size: 1rem;}
-    }
-    
-    /* Utility classes */
-    .spinner {color: #1a73e8 !important;}
-    .divider {border-top: 1px solid #e8eaed; margin: 2rem 0;}
-    .footer {text-align: center; margin-top: 2rem; color: #BAECFF; font-size: 0.9rem;}
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
-# App Header
-st.markdown("""
-    <div class="header">
-        <h1 class="title">MediBot 🩺</h1>
-        <p class="subtitle">AI-powered medical education assistant</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# Initialize session state
+# Initialize Session State
 if 'history' not in st.session_state:
     st.session_state.history = []
 if 'last_question' not in st.session_state:
     st.session_state.last_question = ""
+if 'total_queries' not in st.session_state:
+    st.session_state.total_queries = 0
 
-# Main content container
-with st.container():
-    col1, col2 = st.columns([1, 2], gap="large")
+# Simple Header
+st.markdown("""
+<div class="header">
+    <div class="title">🩺 MediBot</div>
+    <div class="subtitle">AI Medical Assistant</div>
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value">{}</div>
+            <div>Queries</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{}</div>
+            <div>Specialties</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{}</div>
+            <div>Total</div>
+        </div>
+    </div>
+</div>
+""".format(
+    len(st.session_state.history),
+    len(set([h['inputs']['qualification'] for h in st.session_state.history])),
+    st.session_state.total_queries
+), unsafe_allow_html=True)
+
+# Main Content Container
+container = st.container()
+
+with container:
+    # Input Section
+    st.markdown("""
+    <div class="input-section">
+        <div class="section-title ">Ask a Medical Questions</div>
+    """, unsafe_allow_html=True)
     
-    with col1:
-        # History Section
-        st.subheader("Recent Queries")
-        if st.session_state.history:
-            for i, entry in enumerate(reversed(st.session_state.history[:5])):
-                with st.container():
-                    st.markdown(f"""
-                        <div class="history-card">
-                            <div class="history-question">{entry['inputs']['question'][:60]}{'...' if len(entry['inputs']['question']) > 60 else ''}</div>
-                            <div class="history-qualification">{entry['inputs']['qualification']}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+    with st.form("medical_query"):
+        # Qualification Input
+        st.markdown('<div class="input-label">Your Educational Background📖</div>', unsafe_allow_html=True)
+        qualification = st.text_input(
+            "Qualification",
+            placeholder="E.g., MBBS Student, Nursing, Medical Resident...",
+            label_visibility="collapsed"
+        )
+        
+        # Question Input
+        st.markdown('<div class="input-label">Your Question❔</div>', unsafe_allow_html=True)
+        question = st.text_area(
+            "Question",
+            placeholder="Ask your medical question here...",
+            label_visibility="collapsed",
+            height=120
+        )
+        
+        # Submit Button
+        submit_button = st.form_submit_button("Get Answer😊", use_container_width=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Handle Form Submission
+    if submit_button:
+        if not qualification or not question:
+            st.error("Please fill in both fields")
         else:
-            st.info("Your recent questions will appear here")
+            cleaned_qualification = clean_input(qualification)
+            cleaned_question = clean_input(question)
             
-        # Clear history button
-        if st.session_state.history and st.button("Clear History", use_container_width=True):
+            # Check for duplicate
+            if cleaned_question == st.session_state.last_question:
+                st.info("Showing cached response")
+            else:
+                st.session_state.last_question = cleaned_question
+                st.session_state.total_queries += 1
+            
+            # Generate Response
+            with st.spinner("Generating answer..."):
+                start_time = time.time()
+                answer = get_cached_advice(model, cleaned_qualification, cleaned_question)
+                response_time = time.time() - start_time
+                
+                # Display Response
+                st.markdown("""
+                    <div class="response-section">
+                        <div class="response-header">
+                            <strong>👨‍⚕️ Expert's Answer</strong>
+                        </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(answer)
+                
+                st.markdown("""
+                        <div class="response-meta">
+                            <div>Generated in {:.1f}s</div>
+                            <div>{} words</div>
+                            <div>For: {}</div>
+                        </div>
+                    </div>
+                """.format(response_time, len(answer.split()), cleaned_qualification), unsafe_allow_html=True)
+                
+                # Add to History
+                st.session_state.history.append({
+                    "inputs": {
+                        "qualification": cleaned_qualification,
+                        "question": cleaned_question
+                    },
+                    "answer": answer,
+                    "timestamp": time.time(),
+                    "response_time": response_time,
+                    "date": datetime.now().strftime("%H:%M")
+                })
+    
+    # History Section
+    st.markdown("""
+    <div class="history-section">
+        <div class="section-title" style="color: white;">Recent Questions🙋‍♀️</div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.history:
+        for i, entry in enumerate(reversed(st.session_state.history[:6])):
+            question_preview = entry['inputs']['question']
+            if len(question_preview) > 80:
+                question_preview = question_preview[:80] + '...'
+            
+            st.markdown(f"""
+                <div class="history-item">
+                    <div class="history-question">{question_preview}</div>
+                    <div class="history-info">
+                        <div class="history-badge">{entry['inputs']['qualification']}</div>
+                        <div>{entry['date']} • {entry['response_time']:.1f}s</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div class="empty-state">
+                No questions yet. Ask your first question above.
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Clear History Button
+    if st.session_state.history:
+        if st.button("Clear History", use_container_width=True):
             st.session_state.history = []
             st.session_state.last_question = ""
             st.rerun()
-            
     
-    with col2:
-        # Input Form
-        with st.form("student_form", border=False):
-            st.markdown('<div class="form-container">', unsafe_allow_html=True)
-            
-            st.markdown('<div class="input-label">Your Educational Level📖</div>', unsafe_allow_html=True)
-            qualification = st.text_input(
-                "Qualification", 
-                placeholder="Eg: 3rd Year MBBS, Nursing, Phisio, etc",
-                label_visibility="collapsed"
-            )
-            
-            st.markdown('<div class="input-label">Your Question❓</div>', unsafe_allow_html=True)
-            question = st.text_area(
-                "Question", 
-                placeholder="Feel free to ask any type of medical question...",
-                label_visibility="collapsed",
-                height=120
-            )
-            
-            submit = st.form_submit_button("Get Answer✨", type="primary", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Handle form submission
-        if submit:
-            if not qualification or not question:
-                st.error("Please fill in both fields")
-            else:
-                cleaned_qualification = clean_input(qualification)
-                cleaned_question = clean_input(question)
-                
-                # Prevent duplicate queries
-                if cleaned_question == st.session_state.last_question:
-                    st.warning("Same as previous question. Showing cached response.")
-                else:
-                    st.session_state.last_question = cleaned_question
-                
-                # Display response
-                with st.spinner("Researching medical literature..."):
-                    start_time = time.time()
-                    answer = get_cached_advice(model, cleaned_qualification, cleaned_question)
-                    response_time = time.time() - start_time
-                    
-                    st.markdown("""
-                        <div class="response-box">
-                            <div class="response-header">
-                                <h3>Expert Answer</h3>
-                            </div>
-                            <div class="response-content">
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown(answer, unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                            </div>
-                            <div style="margin-top: 1.5rem; color: #5f6368; font-size: 0.9rem;">
-                                Generated in {response_time:.1f}s
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Add to history
-                    st.session_state.history.append({
-                        "inputs": {
-                            "qualification": cleaned_qualification,
-                            "question": cleaned_question
-                        },
-                        "answer": answer
-                    })
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Footer
-    st.markdown("""
-        <div class="footer">
-            <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
-            <p>MediBot v1.5 | AI-powered medical education assistant</p>
-            <p><small>Made with ❤️ by Anubhab</small></p>
-        </div>
-    """, unsafe_allow_html=True)
+# Simple Footer
+st.markdown("""
+<div class="footer">
+    <div>MediBot • Medical Education Assistant</div>
+    <div style="margin-top: 0.5rem; font-size: 0.8rem;">
+        Made by Anubhab • Consult professionals for medical decisions
+    </div>
+</div>
+""", unsafe_allow_html=True)
